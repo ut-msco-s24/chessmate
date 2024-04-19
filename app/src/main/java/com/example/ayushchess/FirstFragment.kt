@@ -1,6 +1,7 @@
 package com.example.ayushchess
 
 import android.app.AlertDialog
+import android.graphics.Color
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.util.Log
@@ -15,6 +16,7 @@ import com.example.ayushchess.databinding.FragmentFirstBinding
 import com.github.bhlangonijr.chesslib.Board
 import com.github.bhlangonijr.chesslib.File
 import com.github.bhlangonijr.chesslib.Piece
+import com.github.bhlangonijr.chesslib.PieceType
 import com.github.bhlangonijr.chesslib.Rank
 import com.github.bhlangonijr.chesslib.Side
 import com.github.bhlangonijr.chesslib.Square
@@ -25,7 +27,7 @@ class FirstFragment : Fragment() {
 
     private var isWhiteTurn: Boolean = true
     val minutes: Long = 1
-    val time: Long = 60 * minutes * 100
+    val time: Long = 60 * minutes * 500
     private var whiteTimeMillis: Long = time
     private var blackTimeMillis: Long = time
 
@@ -58,7 +60,8 @@ class FirstFragment : Fragment() {
 
             override fun onFinish() {
                 this.cancel()
-                gameOver(if (side == Side.WHITE) Side.BLACK else Side.WHITE)
+                val sideWin = if (side == Side.WHITE) Side.BLACK else Side.WHITE
+                gameOver(sideWin, "${if (side == Side.WHITE) "Black" else "White"} wins on time")
             }
         }
     }
@@ -90,6 +93,25 @@ class FirstFragment : Fragment() {
 
     fun render() {
         clearHighlights()  // Clear previous highlights
+        if (board.isDraw) {
+            if(board.isInsufficientMaterial) {
+                gameOver(null, "Draw by insufficent material")
+            }
+            if(board.isRepetition) {
+                gameOver(null, "Draw by repetition")
+            }
+            if(board.isStaleMate) {
+                gameOver(null, "Draw by stalemate")
+            }
+        }
+        else if(board.isMated) {
+            if (board.sideToMove == Side.BLACK) {
+                gameOver(Side.WHITE, "White wins by checkmate")
+            }
+            else {
+                gameOver(Side.BLACK, "Black wins by checkmate")
+            }
+        }
         if (selection != null) {
             val moves = board.legalMoves().filter { it.from == selection!!.s }
             moves.forEach { move ->
@@ -139,9 +161,10 @@ class FirstFragment : Fragment() {
         return String.format("%02d:%02d", minutes, seconds)
     }
 
-    private fun gameOver(winner: Side) {
+    private fun gameOver(winner: Side?, message: String = "") {
 
-        val message = if (winner == Side.WHITE) "White wins on time!" else "Black wins on time!"
+        whiteTimer?.cancel()
+        blackTimer?.cancel()
 
         for (i in 0 until 8) {
             for (j in 0 until 8) {
@@ -264,9 +287,17 @@ class FirstFragment : Fragment() {
                 val pieceImageView =
                     frameLayout.getChildAt(1) as ImageView  // Piece ImageView is assumed to be the second child
                 val squareImageView = frameLayout.getChildAt(0) as ImageView
+
                 val drawableId = drawableMap[piece] ?: 0
                 if (drawableId > 0) {
-                    pieceImageView.setImageResource(drawableId)
+                    if (piece.pieceType == PieceType.KING
+                        &&  board.isKingAttacked
+                        && piece.pieceSide == board.sideToMove) {
+                        pieceImageView.setImageResource(R.drawable.red_king)
+                    }
+                    else {
+                        pieceImageView.setImageResource(drawableId)
+                    }
                     if (piece.pieceSide == board.sideToMove) {
                         squareImageView.setOnClickListener {
                             selection = Selection(piece, square);
@@ -307,15 +338,8 @@ class FirstFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        fun convertMillisToTimeFormat(milliseconds: Long): String {
-            val totalSeconds = milliseconds / 1000
-            val minutes = totalSeconds / 60
-            val seconds = totalSeconds % 60
-            return String.format("%02d:%02d", minutes, seconds)
-        }
-
-        binding.clockBottom.text = convertMillisToTimeFormat(time)
-        binding.clockTop.text = convertMillisToTimeFormat(time)
+        binding.clockBottom.text = formatTime(time)
+        binding.clockTop.text = formatTime(time)
         populateChessBoard()
         render()
 

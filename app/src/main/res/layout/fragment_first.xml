@@ -29,14 +29,14 @@
         android:textSize="24sp"
         android:textStyle="bold" />
 
-    <Button
+    <ImageButton
         android:id="@+id/buttonResign"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_alignParentStart="true"
         android:layout_below="@id/chessBoard"
-        android:layout_centerHorizontal="true"
-        android:layout_marginBottom="64dp"
-        android:padding="16dp"
+        android:background="@drawable/white_flag"
+        android:layout_margin="16dp"
         android:text="Resign" />
 
     <TextView
