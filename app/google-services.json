@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "427515899256",
+    "project_id": "ayushchess-74d9a",
+    "storage_bucket": "ayushchess-74d9a.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:427515899256:android:4da0d5fb503e2a3b5fac8d",
+        "android_client_info": {
+          "package_name": "com.example.ayushchess"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCAYTJgbEorcl4KS9qztcbmppw0eRZKMo8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

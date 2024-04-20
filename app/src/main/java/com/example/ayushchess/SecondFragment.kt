@@ -32,8 +32,14 @@ class SecondFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        binding.buttonSecond.setOnClickListener {
+        (activity as MainActivity).supportActionBar?.hide()
+
+        binding.buttonPlay.setOnClickListener {
             findNavController().navigate(R.id.action_SecondFragment_to_FirstFragment)
+        }
+
+        binding.buttonLogout.setOnClickListener {
+            (activity as MainActivity).authUser.logout()
         }
     }
 

@@ -1,7 +1,6 @@
 package com.example.ayushchess
 
 import android.app.AlertDialog
-import android.graphics.Color
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.util.Log
@@ -12,6 +11,7 @@ import android.widget.FrameLayout
 import android.widget.GridLayout
 import android.widget.ImageView
 import androidx.fragment.app.Fragment
+import androidx.navigation.fragment.findNavController
 import com.example.ayushchess.databinding.FragmentFirstBinding
 import com.github.bhlangonijr.chesslib.Board
 import com.github.bhlangonijr.chesslib.File
@@ -26,8 +26,8 @@ import kotlin.properties.Delegates
 class FirstFragment : Fragment() {
 
     private var isWhiteTurn: Boolean = true
-    val minutes: Long = 1
-    val time: Long = 60 * minutes * 500
+    val minutes: Long = 3
+    val time: Long = 60 * minutes * 1000
     private var whiteTimeMillis: Long = time
     private var blackTimeMillis: Long = time
 
@@ -49,19 +49,24 @@ class FirstFragment : Fragment() {
     private fun createTimer(timeMillis: Long, side: Side): CountDownTimer {
         return object : CountDownTimer(timeMillis, 1000) {
             override fun onTick(millisUntilFinished: Long) {
-                if (side == Side.WHITE) {
-                    whiteTimeMillis = millisUntilFinished
-                    binding.clockBottom.text = formatTime(millisUntilFinished)
-                } else {
-                    blackTimeMillis = millisUntilFinished
-                    binding.clockTop.text = formatTime(millisUntilFinished)
+                if(isAdded) {
+                    if (side == Side.WHITE) {
+                        whiteTimeMillis = millisUntilFinished
+                        binding?.clockBottom?.text = formatTime(millisUntilFinished)
+
+                    } else {
+                        blackTimeMillis = millisUntilFinished
+                        binding?.clockTop?.text = formatTime(millisUntilFinished)
+                    }
                 }
             }
 
             override fun onFinish() {
                 this.cancel()
-                val sideWin = if (side == Side.WHITE) Side.BLACK else Side.WHITE
-                gameOver(sideWin, "${if (side == Side.WHITE) "Black" else "White"} wins on time")
+                if (isAdded) {
+                    val sideWin = if (side == Side.WHITE) Side.BLACK else Side.WHITE
+                    gameOver("${if (side == Side.WHITE) "Black" else "White"} wins on time")
+                }
             }
         }
     }
@@ -91,25 +96,25 @@ class FirstFragment : Fragment() {
         isWhiteTurn = !isWhiteTurn
     }
 
-    fun render() {
+    private fun render() {
         clearHighlights()  // Clear previous highlights
         if (board.isDraw) {
             if(board.isInsufficientMaterial) {
-                gameOver(null, "Draw by insufficent material")
+                gameOver("Draw by insufficent material")
             }
             if(board.isRepetition) {
-                gameOver(null, "Draw by repetition")
+                gameOver("Draw by repetition")
             }
             if(board.isStaleMate) {
-                gameOver(null, "Draw by stalemate")
+                gameOver("Draw by stalemate")
             }
         }
         else if(board.isMated) {
             if (board.sideToMove == Side.BLACK) {
-                gameOver(Side.WHITE, "White wins by checkmate")
+                gameOver("White wins by checkmate")
             }
             else {
-                gameOver(Side.BLACK, "Black wins by checkmate")
+                gameOver("Black wins by checkmate")
             }
         }
         if (selection != null) {
@@ -161,7 +166,7 @@ class FirstFragment : Fragment() {
         return String.format("%02d:%02d", minutes, seconds)
     }
 
-    private fun gameOver(winner: Side?, message: String = "") {
+    private fun gameOver(message: String = "") {
 
         whiteTimer?.cancel()
         blackTimer?.cancel()
@@ -180,7 +185,11 @@ class FirstFragment : Fragment() {
         AlertDialog.Builder(requireContext())
             .setTitle("Game Over")
             .setMessage(message)
-            .setPositiveButton("OK") { dialog, _ -> dialog.dismiss() }
+            .setCancelable(false)
+            .setPositiveButton("OK") { dialog, _ ->
+                dialog.dismiss()
+                findNavController().navigate(R.id.SecondFragment)
+             }
             .show()
     }
 
@@ -337,10 +346,20 @@ class FirstFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        (activity as MainActivity).supportActionBar?.hide()
+
 
         binding.clockBottom.text = formatTime(time)
         binding.clockTop.text = formatTime(time)
         populateChessBoard()
+        binding.buttonResign.setOnClickListener {
+            if (board.sideToMove == Side.BLACK) {
+                gameOver("White wins by opposing resignation")
+            }
+            else {
+                gameOver("Black wins by opposing resignation")
+            }
+        }
         render()
 
     }
