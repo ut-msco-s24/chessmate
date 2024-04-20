@@ -21,11 +21,19 @@ import com.github.bhlangonijr.chesslib.Rank
 import com.github.bhlangonijr.chesslib.Side
 import com.github.bhlangonijr.chesslib.Square
 import com.github.bhlangonijr.chesslib.move.Move
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.DatabaseReference
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
+import java.util.UUID
 import kotlin.properties.Delegates
 
 class FirstFragment : Fragment() {
 
-    private var isWhiteTurn: Boolean = true
+    private lateinit var databaseReference: DatabaseReference
+    private var gameId: String? = null
+    private var playerSide: Side? = null
     val minutes: Long = 3
     val time: Long = 60 * minutes * 1000
     private var whiteTimeMillis: Long = time
@@ -64,17 +72,56 @@ class FirstFragment : Fragment() {
             override fun onFinish() {
                 this.cancel()
                 if (isAdded) {
-                    val sideWin = if (side == Side.WHITE) Side.BLACK else Side.WHITE
                     gameOver("${if (side == Side.WHITE) "Black" else "White"} wins on time")
                 }
             }
         }
     }
 
+    private fun initializeNewGame() { // Generate a unique game ID
+        val initialFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+        playerSide = if (Math.random() < 0.50) Side.WHITE else Side.BLACK
+
+        if(playerSide == Side.WHITE) {
+            binding.topText.text = "Opponent"
+            binding.bottomText.text = "You"
+        }
+        else {
+            binding.topText.text = "You"
+            binding.bottomText.text = "Opponent"
+        }
+
+        val startingTurn = if (playerSide == Side.BLACK) "ai" else "player"
+
+        databaseReference.setValue(
+            mapOf(
+                "fen" to initialFen,
+                "turn" to "init",
+                "status" to "ongoing"
+            )
+        )
+
+        val updates = hashMapOf<String, Any>(
+            "fen" to initialFen,
+            "turn" to "ai"
+        )
+
+        if(playerSide == Side.BLACK) {
+            databaseReference.updateChildren(updates).addOnCompleteListener { task ->
+                if (task.isSuccessful) {
+                    Log.d("UpdateFirebase", "Game updated successfully")
+                } else {
+                    Log.e("UpdateFirebase", "Failed to update game", task.exception)
+                }
+            }
+        }
+
+    }
+
     private val board: Board = Board()
 
     private fun onMoveMade() {
-        if (isWhiteTurn) {
+        if (board.sideToMove == Side.BLACK) {
             whiteTimer?.cancel()  // Cancel the current white timer
             whiteTimer = null  // Nullify the timer
 
@@ -93,7 +140,6 @@ class FirstFragment : Fragment() {
             }
             whiteTimer?.start()
         }
-        isWhiteTurn = !isWhiteTurn
     }
 
     private fun render() {
@@ -132,7 +178,6 @@ class FirstFragment : Fragment() {
         val squareImageView = frameLayout.getChildAt(0) as ImageView
         squareImageView.setImageResource(R.drawable.gray_square)
         squareImageView.setOnClickListener {
-            onMoveMade()
             Log.d("asdfads", "click")
             val targetSquare = Square.squareAt(rowIndex * 8 + colIndex)
 
@@ -155,7 +200,46 @@ class FirstFragment : Fragment() {
                 }
 
                 selection = null
+                val newFen = board.fen
+                updateFirebaseGame(newFen)
                 render()
+            }
+        }
+    }
+
+    private fun setupFirebaseGameListener() {
+        val gameRef = databaseReference
+        gameRef.addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                Log.d("asdfadsf", "$snapshot")
+
+                val fen = snapshot.child("fen").getValue(String::class.java) ?: return
+                val turn = snapshot.child("turn").getValue(String::class.java) ?: return
+
+                if (turn == "player") {
+                    board.loadFromFen(fen)
+                    render()
+                    onMoveMade()
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Log.e("Firebase", "Failed to read game data", error.toException())
+            }
+        })
+    }
+
+    private fun updateFirebaseGame(newFen: String) {
+        val updates = hashMapOf<String, Any>(
+            "fen" to newFen,
+            "turn" to "ai"
+        )
+        onMoveMade()
+        databaseReference.updateChildren(updates).addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                Log.d("UpdateFirebase", "Game updated successfully")
+            } else {
+                Log.e("UpdateFirebase", "Failed to update game", task.exception)
             }
         }
     }
@@ -254,7 +338,7 @@ class FirstFragment : Fragment() {
 
     data class Selection(val p: Piece, val s: Square)
 
-    var selection: Selection? = null;
+    private var selection: Selection? = null;
 
     private fun clearHighlights() {
         for (i in 0 until 8) {
@@ -267,7 +351,7 @@ class FirstFragment : Fragment() {
         }
     }
 
-    val drawableMap = mapOf(
+    private val drawableMap = mapOf(
         Pair(Piece.WHITE_PAWN, R.drawable.white_pawn),
         Pair(Piece.WHITE_KNIGHT, R.drawable.white_knight),
         Pair(Piece.WHITE_BISHOP, R.drawable.white_bishop),
@@ -284,7 +368,6 @@ class FirstFragment : Fragment() {
     )
 
     private fun updatePieces() {
-
         for (rank in Rank.values().reversed().subList(1, 9)) { // Start from rank 8 to rank 1
             for (file in File.values().toList().subList(0, 8)) { // Start from file A to file H
                 val square = Square.encode(rank, file)
@@ -307,7 +390,7 @@ class FirstFragment : Fragment() {
                     else {
                         pieceImageView.setImageResource(drawableId)
                     }
-                    if (piece.pieceSide == board.sideToMove) {
+                    if (piece.pieceSide == playerSide) {
                         squareImageView.setOnClickListener {
                             selection = Selection(piece, square);
                             render();
@@ -325,7 +408,7 @@ class FirstFragment : Fragment() {
     }
 
 
-    fun translateSquareToBoardIndex(square: Square): Pair<Int, Int> {
+    private fun translateSquareToBoardIndex(square: Square): Pair<Int, Int> {
         // Implement the translation logic here. This will depend on how you've mapped the squares.
         // For a standard 8x8 chess board:
         val rowIndex = square.rank.ordinal// if rank 1 is at the bottom in your app
@@ -348,10 +431,17 @@ class FirstFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         (activity as MainActivity).supportActionBar?.hide()
 
+        gameId = UUID.randomUUID().toString()
 
         binding.clockBottom.text = formatTime(time)
         binding.clockTop.text = formatTime(time)
+        databaseReference = FirebaseDatabase.getInstance().getReference("games/$gameId")
+
         populateChessBoard()
+        setupFirebaseGameListener()
+        initializeNewGame()
+
+
         binding.buttonResign.setOnClickListener {
             if (board.sideToMove == Side.BLACK) {
                 gameOver("White wins by opposing resignation")
