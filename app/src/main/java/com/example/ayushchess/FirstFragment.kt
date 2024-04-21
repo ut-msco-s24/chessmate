@@ -31,6 +31,7 @@ import kotlin.properties.Delegates
 
 class FirstFragment : Fragment() {
 
+    private val initialFen: String = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
     private lateinit var databaseReference: DatabaseReference
     private var gameId: String? = null
     private var playerSide: Side? = null
@@ -78,8 +79,9 @@ class FirstFragment : Fragment() {
         }
     }
 
+
+
     private fun initializeNewGame() { // Generate a unique game ID
-        val initialFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
         playerSide = if (Math.random() < 0.50) Side.WHITE else Side.BLACK
 
         if(playerSide == Side.WHITE) {
@@ -91,7 +93,6 @@ class FirstFragment : Fragment() {
             binding.bottomText.text = "Opponent"
         }
 
-        val startingTurn = if (playerSide == Side.BLACK) "ai" else "player"
 
         databaseReference.setValue(
             mapOf(
@@ -143,6 +144,9 @@ class FirstFragment : Fragment() {
     }
 
     private fun render() {
+        if(!isAdded) {
+            return
+        }
         clearHighlights()  // Clear previous highlights
         if (board.isDraw) {
             if(board.isInsufficientMaterial) {
@@ -177,8 +181,8 @@ class FirstFragment : Fragment() {
         val frameLayout = getViewFromGrid(binding.chessBoard, rowIndex, colIndex) as FrameLayout
         val squareImageView = frameLayout.getChildAt(0) as ImageView
         squareImageView.setImageResource(R.drawable.gray_square)
+        squareImageView.setOnClickListener(null)
         squareImageView.setOnClickListener {
-            Log.d("asdfads", "click")
             val targetSquare = Square.squareAt(rowIndex * 8 + colIndex)
 
             // Check if the move is a pawn promotion
@@ -188,8 +192,16 @@ class FirstFragment : Fragment() {
                         (piece == Piece.BLACK_PAWN && to.rank == Rank.RANK_1)
             }
             selection?.let { sel ->
+
+                val afterMove =  {
+                    selection = null
+                    val newFen = board.fen
+                    updateFirebaseGame(newFen)
+                    render()
+                }
+
                 if (isPromotionMove(sel.s, targetSquare)) {
-                    showPromotionDialog(sel.s, targetSquare) // Handle promotion
+                    showPromotionDialog(sel.s, targetSquare, afterMove) // Handle promotion
                 } else {
                     board.doMove(
                         Move(
@@ -197,12 +209,8 @@ class FirstFragment : Fragment() {
                             Square.squareAt(rowIndex * 8 + colIndex)
                         )
                     )  // Pseudocode for move execution
+                    afterMove()
                 }
-
-                selection = null
-                val newFen = board.fen
-                updateFirebaseGame(newFen)
-                render()
             }
         }
     }
@@ -278,7 +286,7 @@ class FirstFragment : Fragment() {
     }
 
 
-    private fun showPromotionDialog(pawnSquare: Square, toSquare: Square) {
+    private fun showPromotionDialog(pawnSquare: Square, toSquare: Square, afterMove: () -> Unit) {
         val currentSide = board.getPiece(pawnSquare).pieceSide
         val dialogView = LayoutInflater.from(context).inflate(R.layout.dialog, null)
 
@@ -321,7 +329,7 @@ class FirstFragment : Fragment() {
             selectedPiece?.let {
                 val promotionMove = Move(pawnSquare, toSquare, it)
                 board.doMove(promotionMove)
-                render()
+                afterMove()
             }
             dialog.dismiss()
         }
@@ -455,7 +463,7 @@ class FirstFragment : Fragment() {
     }
 
     private fun populateChessBoard() {
-        board.loadFromFen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1")
+        board.loadFromFen(initialFen)
         val size = 8  // Size of the grid (chessboard is 8x8)
         val displayMetrics = resources.displayMetrics
         val screenWidth = displayMetrics.widthPixels
