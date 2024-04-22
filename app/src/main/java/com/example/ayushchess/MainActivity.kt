@@ -1,5 +1,6 @@
 package com.example.ayushchess
 
+import MainViewModel
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.viewModels
@@ -51,7 +52,7 @@ class MainActivity : AppCompatActivity() {
         lifecycle.addObserver(authUser)
 
         authUser.observeUser().observe(this) { user ->
-            viewModel.setCurrentAuthUser(user)
+            viewModel.setCurrentUser(user)
         }
     }
 }

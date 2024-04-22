@@ -1,5 +1,6 @@
 package com.example.ayushchess
 
+import MainViewModel
 import android.app.AlertDialog
 import android.os.Bundle
 import android.os.CountDownTimer
@@ -11,6 +12,7 @@ import android.widget.FrameLayout
 import android.widget.GridLayout
 import android.widget.ImageView
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
 import androidx.navigation.fragment.findNavController
 import com.example.ayushchess.databinding.FragmentFirstBinding
 import com.github.bhlangonijr.chesslib.Board
@@ -31,6 +33,7 @@ import kotlin.properties.Delegates
 
 class FirstFragment : Fragment() {
 
+    private var isVsPlayer: Boolean = false
     private val initialFen: String = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
     private lateinit var databaseReference: DatabaseReference
     private var gameId: String? = null
@@ -42,6 +45,7 @@ class FirstFragment : Fragment() {
 
     private var whiteTimer: CountDownTimer? = null
 
+    private val viewModel: MainViewModel by activityViewModels()
 
     private var blackTimer: CountDownTimer? = null
 
@@ -80,8 +84,28 @@ class FirstFragment : Fragment() {
     }
 
 
-
     private fun initializeNewGame() { // Generate a unique game ID
+
+        if(playerSide == Side.WHITE) {
+            binding.topText.text = "Opponent"
+            binding.bottomText.text = "You"
+        }
+        else {
+            binding.topText.text = "You"
+            binding.bottomText.text = "Opponent"
+        }
+
+        databaseReference.setValue(
+            mapOf(
+                "fen" to initialFen,
+                "turn" to "init",
+                "status" to "ongoing"
+            )
+        )
+
+    }
+
+    private fun initializeNewGameAi() { // Generate a unique game ID
         playerSide = if (Math.random() < 0.50) Side.WHITE else Side.BLACK
 
         if(playerSide == Side.WHITE) {
@@ -223,12 +247,21 @@ class FirstFragment : Fragment() {
 
                 val fen = snapshot.child("fen").getValue(String::class.java) ?: return
                 val turn = snapshot.child("turn").getValue(String::class.java) ?: return
+                val board2 = Board()
+                board2.loadFromFen(fen)
+                Log.d("asdfadsf", fen)
+                Log.d("tagsdfasd", playerSide.toString())
 
-                if (turn == "player") {
+                if (board2.sideToMove == playerSide) {
                     board.loadFromFen(fen)
                     render()
                     onMoveMade()
                 }
+//                if (turn == "player") {
+//                    board.loadFromFen(fen)
+//                    render()
+//                    onMoveMade()
+//                }
             }
 
             override fun onCancelled(error: DatabaseError) {
@@ -238,10 +271,19 @@ class FirstFragment : Fragment() {
     }
 
     private fun updateFirebaseGame(newFen: String) {
-        val updates = hashMapOf<String, Any>(
-            "fen" to newFen,
-            "turn" to "ai"
-        )
+        var updates: HashMap<String, Any>
+        if(!isVsPlayer) {
+            updates = hashMapOf<String, Any>(
+                "fen" to newFen,
+                "turn" to "ai"
+            )
+        }
+        else {
+            updates = hashMapOf<String, Any>(
+                "fen" to newFen,
+            )
+        }
+
         onMoveMade()
         databaseReference.updateChildren(updates).addOnCompleteListener { task ->
             if (task.isSuccessful) {
@@ -439,10 +481,27 @@ class FirstFragment : Fragment() {
         super.onViewCreated(view, savedInstanceState)
         (activity as MainActivity).supportActionBar?.hide()
 
-        gameId = UUID.randomUUID().toString()
+
 
         binding.clockBottom.text = formatTime(time)
         binding.clockTop.text = formatTime(time)
+        gameId = arguments?.getString("gameId")
+
+        if(gameId == null) {
+            gameId = UUID.randomUUID().toString()
+        }
+        else {
+            isVsPlayer = true
+        }
+
+        if(arguments?.getString("side") == "black") {
+            playerSide  = Side.BLACK
+        }
+        else if(arguments?.getString("side") == "white") {
+            playerSide = Side.WHITE
+        }
+
+
         databaseReference = FirebaseDatabase.getInstance().getReference("games/$gameId")
 
         populateChessBoard()
