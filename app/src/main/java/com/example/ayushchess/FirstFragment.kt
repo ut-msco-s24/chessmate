@@ -99,7 +99,9 @@ class FirstFragment : Fragment() {
             mapOf(
                 "fen" to initialFen,
                 "turn" to "init",
-                "status" to "ongoing"
+                "status" to "ongoing",
+                "whiteTime" to whiteTimeMillis.toString(),
+                "blackTime" to blackTimeMillis.toString()
             )
         )
 
@@ -247,12 +249,17 @@ class FirstFragment : Fragment() {
 
                 val fen = snapshot.child("fen").getValue(String::class.java) ?: return
                 val turn = snapshot.child("turn").getValue(String::class.java) ?: return
+                val blackTimeStr = snapshot.child("blackTime").getValue(String::class.java) ?: return
+                val whiteTimeStr = snapshot.child("whiteTime").getValue(String::class.java) ?: return
+
+                whiteTimeMillis = whiteTimeStr.toLong()
+                blackTimeMillis = blackTimeStr.toLong()
                 val board2 = Board()
                 board2.loadFromFen(fen)
                 Log.d("asdfadsf", fen)
                 Log.d("tagsdfasd", playerSide.toString())
 
-                if (board2.sideToMove == playerSide) {
+                if (board2.sideToMove == playerSide && turn != "init") {
                     board.loadFromFen(fen)
                     render()
                     onMoveMade()
@@ -273,14 +280,17 @@ class FirstFragment : Fragment() {
     private fun updateFirebaseGame(newFen: String) {
         var updates: HashMap<String, Any>
         if(!isVsPlayer) {
-            updates = hashMapOf<String, Any>(
+            updates = hashMapOf(
                 "fen" to newFen,
                 "turn" to "ai"
             )
         }
         else {
-            updates = hashMapOf<String, Any>(
+            updates = hashMapOf(
                 "fen" to newFen,
+                "whiteTime" to whiteTimeMillis.toString(),
+                "blackTime" to blackTimeMillis.toString(),
+                "turn" to "opp"
             )
         }
 
@@ -510,6 +520,9 @@ class FirstFragment : Fragment() {
 
 
         binding.buttonResign.setOnClickListener {
+            if (board.sideToMove != playerSide) {
+                return@setOnClickListener
+            }
             if (board.sideToMove == Side.BLACK) {
                 gameOver("White wins by opposing resignation")
             }
