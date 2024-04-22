@@ -23,9 +23,20 @@
                 android:id="@+id/button_play"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Play"/>
+                android:text="Play (Multiplayer)"/>
 
             <!-- Add some vertical space between the buttons -->
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="16dp"/>
+
+            <!-- The Logout button -->
+            <Button
+                android:id="@+id/playAi"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Play (AI)"/>
+
             <Space
                 android:layout_width="match_parent"
                 android:layout_height="16dp"/>

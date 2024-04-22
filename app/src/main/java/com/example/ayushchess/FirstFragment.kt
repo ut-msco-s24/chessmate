@@ -33,13 +33,14 @@ import kotlin.properties.Delegates
 
 class FirstFragment : Fragment() {
 
+    private var gameOverFlag: Boolean = false
     private var isVsPlayer: Boolean = false
     private val initialFen: String = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
     private lateinit var databaseReference: DatabaseReference
     private var gameId: String? = null
     private var playerSide: Side? = null
     val minutes: Long = 3
-    val time: Long = 60 * minutes * 1000
+    val time: Long = 60 * minutes * 100
     private var whiteTimeMillis: Long = time
     private var blackTimeMillis: Long = time
 
@@ -169,6 +170,24 @@ class FirstFragment : Fragment() {
         }
     }
 
+    private fun gameOverUpdate(status: String) {
+        val updates = hashMapOf<String, Any>(
+            "whiteTime" to whiteTimeMillis.toString(),
+            "blackTime" to blackTimeMillis.toString(),
+            "turn" to "opp",
+            "status" to status
+        )
+
+
+        databaseReference.updateChildren(updates).addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                Log.d("UpdateFirebase", "Game updated successfully")
+            } else {
+                Log.e("UpdateFirebase", "Failed to update game", task.exception)
+            }
+        }
+    }
+
     private fun render() {
         if(!isAdded) {
             return
@@ -251,6 +270,12 @@ class FirstFragment : Fragment() {
                 val turn = snapshot.child("turn").getValue(String::class.java) ?: return
                 val blackTimeStr = snapshot.child("blackTime").getValue(String::class.java) ?: return
                 val whiteTimeStr = snapshot.child("whiteTime").getValue(String::class.java) ?: return
+                val status = snapshot.child("status").getValue(String::class.java);
+                if (status != null && status != "ongoing" && !gameOverFlag) {
+                    gameOver(status)
+                    return
+                }
+                
 
                 whiteTimeMillis = whiteTimeStr.toLong()
                 blackTimeMillis = blackTimeStr.toLong()
@@ -278,6 +303,7 @@ class FirstFragment : Fragment() {
     }
 
     private fun updateFirebaseGame(newFen: String) {
+
         var updates: HashMap<String, Any>
         if(!isVsPlayer) {
             updates = hashMapOf(
@@ -311,7 +337,9 @@ class FirstFragment : Fragment() {
     }
 
     private fun gameOver(message: String = "") {
-
+        if(gameOverFlag) {
+            return
+        }
         whiteTimer?.cancel()
         blackTimer?.cancel()
 
@@ -324,7 +352,8 @@ class FirstFragment : Fragment() {
 
             }
         }
-
+        
+        gameOverFlag = true;
 
         AlertDialog.Builder(requireContext())
             .setTitle("Game Over")
@@ -525,9 +554,11 @@ class FirstFragment : Fragment() {
             }
             if (board.sideToMove == Side.BLACK) {
                 gameOver("White wins by opposing resignation")
+                gameOverUpdate("White wins by opposing resignation")
             }
             else {
                 gameOver("Black wins by opposing resignation")
+                gameOverUpdate("Black wins by opposing resignation")
             }
         }
         render()
