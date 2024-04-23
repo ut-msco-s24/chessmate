@@ -17,6 +17,16 @@
             android:layout_centerInParent="true"
             android:gravity="center">
 
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="ChessMate"
+                android:textSize="40sp">
+
+            </TextView>
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="32dp"></Space>
             <Button
                 android:id="@+id/button_play"
                 android:layout_width="wrap_content"

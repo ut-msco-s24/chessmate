@@ -41,7 +41,7 @@ class FirstFragment : Fragment() {
     private var gameId: String? = null
     private var playerSide: Side? = null
     val minutes: Long = 3
-    val time: Long = 10 * minutes * 1000
+    val time: Long = 60 * minutes * 1000
     private var whiteTimeMillis: Long = time
     private var blackTimeMillis: Long = time
 
@@ -52,24 +52,21 @@ class FirstFragment : Fragment() {
     private var squareSize by Delegates.notNull<Int>()
     private var _binding: FragmentFirstBinding? = null
 
-    // This property is only valid between onCreateView and
-    // onDestroyView.
+
     private val binding get() = _binding!!
-
-
 
 
     private fun createTimer(timeMillis: Long, side: Side): CountDownTimer {
         return object : CountDownTimer(timeMillis, 1000) {
             override fun onTick(millisUntilFinished: Long) {
-                if(isAdded) {
+                if (isAdded) {
                     if (side == Side.WHITE) {
                         whiteTimeMillis = millisUntilFinished
-                        binding?.clockBottom?.text = formatTime(millisUntilFinished)
+                        binding.clockBottom?.text = formatTime(millisUntilFinished)
 
                     } else {
                         blackTimeMillis = millisUntilFinished
-                        binding?.clockTop?.text = formatTime(millisUntilFinished)
+                        binding.clockTop?.text = formatTime(millisUntilFinished)
                     }
                 }
             }
@@ -84,13 +81,12 @@ class FirstFragment : Fragment() {
     }
 
 
-    private fun initializeNewGame() { // Generate a unique game ID
+    private fun initializeNewGame() {
 
-        if(playerSide == Side.WHITE) {
+        if (playerSide == Side.WHITE) {
             binding.topText.text = "Opponent"
             binding.bottomText.text = "You"
-        }
-        else {
+        } else {
             binding.topText.text = "You"
             binding.bottomText.text = "Opponent"
         }
@@ -107,14 +103,13 @@ class FirstFragment : Fragment() {
 
     }
 
-    private fun initializeNewGameAi() { // Generate a unique game ID
+    private fun initializeNewGameAi() {
         playerSide = if (Math.random() < 0.50) Side.WHITE else Side.BLACK
 
-        if(playerSide == Side.WHITE) {
+        if (playerSide == Side.WHITE) {
             binding.topText.text = "Opponent"
             binding.bottomText.text = "You"
-        }
-        else {
+        } else {
             binding.topText.text = "You"
             binding.bottomText.text = "Opponent"
         }
@@ -133,7 +128,7 @@ class FirstFragment : Fragment() {
             "turn" to "ai"
         )
 
-        if(playerSide == Side.BLACK) {
+        if (playerSide == Side.BLACK) {
             databaseReference.updateChildren(updates).addOnCompleteListener { task ->
                 if (task.isSuccessful) {
                     Log.d("UpdateFirebase", "Game updated successfully")
@@ -149,19 +144,17 @@ class FirstFragment : Fragment() {
 
     private fun onMoveMade() {
         if (board.sideToMove == Side.BLACK) {
-            whiteTimer?.cancel()  // Cancel the current white timer
-            whiteTimer = null  // Nullify the timer
+            whiteTimer?.cancel()
+            whiteTimer = null
 
-            // Initialize and start black timer if it's not already running or null
             if (blackTimer == null) {
                 blackTimer = createTimer(blackTimeMillis, Side.BLACK)
             }
             blackTimer?.start()
         } else {
-            blackTimer?.cancel()  // Cancel the current black timer
-            blackTimer = null  // Nullify the timer
+            blackTimer?.cancel()
+            blackTimer = null
 
-            // Initialize and start white timer if it's not already running or null
             if (whiteTimer == null) {
                 whiteTimer = createTimer(whiteTimeMillis, Side.WHITE)
             }
@@ -191,26 +184,24 @@ class FirstFragment : Fragment() {
     }
 
     private fun render() {
-        if(!isAdded) {
+        if (!isAdded) {
             return
         }
-        clearHighlights()  // Clear previous highlights
+        clearHighlights()
         if (board.isDraw) {
-            if(board.isInsufficientMaterial) {
+            if (board.isInsufficientMaterial) {
                 gameOver("Draw by insufficent material")
             }
-            if(board.isRepetition) {
+            if (board.isRepetition) {
                 gameOver("Draw by repetition")
             }
-            if(board.isStaleMate) {
+            if (board.isStaleMate) {
                 gameOver("Draw by stalemate")
             }
-        }
-        else if(board.isMated) {
+        } else if (board.isMated) {
             if (board.sideToMove == Side.BLACK) {
                 gameOver("White wins by checkmate")
-            }
-            else {
+            } else {
                 gameOver("Black wins by checkmate")
             }
         }
@@ -221,7 +212,7 @@ class FirstFragment : Fragment() {
                 highlightSquare(rowIndex, colIndex)
             }
         }
-        updatePieces()  // Update pieces on the board
+        updatePieces()
     }
 
     private fun highlightSquare(rowIndex: Int, colIndex: Int) {
@@ -232,7 +223,6 @@ class FirstFragment : Fragment() {
         squareImageView.setOnClickListener {
             val targetSquare = Square.squareAt(rowIndex * 8 + colIndex)
 
-            // Check if the move is a pawn promotion
             fun isPromotionMove(from: Square, to: Square): Boolean {
                 val piece = board.getPiece(from)
                 return (piece == Piece.WHITE_PAWN && to.rank == Rank.RANK_8) ||
@@ -240,7 +230,7 @@ class FirstFragment : Fragment() {
             }
             selection?.let { sel ->
 
-                val afterMove =  {
+                val afterMove = {
                     selection = null
                     val newFen = board.fen
                     updateFirebaseGame(newFen)
@@ -248,14 +238,14 @@ class FirstFragment : Fragment() {
                 }
 
                 if (isPromotionMove(sel.s, targetSquare)) {
-                    showPromotionDialog(sel.s, targetSquare, afterMove) // Handle promotion
+                    showPromotionDialog(sel.s, targetSquare, afterMove)
                 } else {
                     board.doMove(
                         Move(
                             sel.s,
                             Square.squareAt(rowIndex * 8 + colIndex)
                         )
-                    )  // Pseudocode for move execution
+                    )
                     afterMove()
                 }
             }
@@ -271,10 +261,12 @@ class FirstFragment : Fragment() {
                 val fen = snapshot.child("fen").getValue(String::class.java) ?: return
                 val turn = snapshot.child("turn").getValue(String::class.java) ?: return
 
-                if(isVsPlayer) {
-                    val blackTimeStr = snapshot.child("blackTime").getValue(String::class.java) ?: return
-                    val whiteTimeStr = snapshot.child("whiteTime").getValue(String::class.java) ?: return
-                    val status = snapshot.child("status").getValue(String::class.java);
+                if (isVsPlayer) {
+                    val blackTimeStr =
+                        snapshot.child("blackTime").getValue(String::class.java) ?: return
+                    val whiteTimeStr =
+                        snapshot.child("whiteTime").getValue(String::class.java) ?: return
+                    val status = snapshot.child("status").getValue(String::class.java)
                     if (status != null && status != "ongoing" && !gameOverFlag) {
                         gameOver(status)
                         return
@@ -297,12 +289,11 @@ class FirstFragment : Fragment() {
 
 
 
-                if (isVsPlayer &&  board2?.sideToMove == playerSide && turn != "init") {
+                if (isVsPlayer && board2?.sideToMove == playerSide && turn != "init") {
                     board.loadFromFen(fen)
                     render()
                     onMoveMade()
-                }
-                else if (!isVsPlayer && turn == "player") {
+                } else if (!isVsPlayer && turn == "player") {
                     board.loadFromFen(fen)
                     render()
                     onMoveMade()
@@ -318,13 +309,12 @@ class FirstFragment : Fragment() {
     private fun updateFirebaseGame(newFen: String) {
 
         var updates: HashMap<String, Any>
-        if(!isVsPlayer) {
+        if (!isVsPlayer) {
             updates = hashMapOf(
                 "fen" to newFen,
                 "turn" to "ai"
             )
-        }
-        else {
+        } else {
             updates = hashMapOf(
                 "fen" to newFen,
                 "whiteTime" to whiteTimeMillis.toString(),
@@ -353,18 +343,17 @@ class FirstFragment : Fragment() {
         val db = FirebaseFirestore.getInstance()
         val userRef = db.collection("wins").document(uid)
 
-        // Run a transaction to ensure atomic read and increment operations
         db.runTransaction { transaction ->
             val snapshot = transaction.get(userRef)
             if (!snapshot.exists()) {
-                // If the document does not exist, create it with a win count of 1
-                transaction.set(userRef, mapOf(
-                    "uid" to uid,
-                    "username" to username,
-                    "wins" to 1
-                ))
+                transaction.set(
+                    userRef, mapOf(
+                        "uid" to uid,
+                        "username" to username,
+                        "wins" to 1
+                    )
+                )
             } else {
-                // If the document exists, increment the wins count
                 val currentWins = snapshot.getLong("wins") ?: 0
                 transaction.update(userRef, "wins", currentWins + 1)
             }
@@ -377,7 +366,7 @@ class FirstFragment : Fragment() {
 
 
     private fun gameOver(message: String = "") {
-        if(gameOverFlag) {
+        if (gameOverFlag) {
             return
         }
 
@@ -394,14 +383,14 @@ class FirstFragment : Fragment() {
 
             }
         }
-        
-        gameOverFlag = true;
 
-        if(message.contains("wins")) {
-            if(message.contains("White") && playerSide == Side.WHITE) {
+        gameOverFlag = true
+
+        if (message.contains("wins")) {
+            if (message.contains("White") && playerSide == Side.WHITE) {
                 pushWinner()
             }
-            if(message.contains("Black") && playerSide == Side.BLACK) {
+            if (message.contains("Black") && playerSide == Side.BLACK) {
                 pushWinner()
             }
         }
@@ -413,7 +402,7 @@ class FirstFragment : Fragment() {
             .setPositiveButton("OK") { dialog, _ ->
                 dialog.dismiss()
                 findNavController().navigate(R.id.SecondFragment)
-             }
+            }
             .show()
     }
 
@@ -427,7 +416,6 @@ class FirstFragment : Fragment() {
         val bishopView = dialogView.findViewById<ImageView>(R.id.bishop)
         val knightView = dialogView.findViewById<ImageView>(R.id.knight)
 
-        // Set images based on the side using the drawableMap
         queenView.setImageResource(
             drawableMap[if (currentSide == Side.WHITE) Piece.WHITE_QUEEN else Piece.BLACK_QUEEN]
                 ?: 0
@@ -449,7 +437,6 @@ class FirstFragment : Fragment() {
             .create()
 
         dialog.setCanceledOnTouchOutside(false)
-        // Listener to handle promotion piece selection
         val listener = View.OnClickListener { view ->
             val selectedPiece = when (view.id) {
                 R.id.queen -> if (currentSide == Side.WHITE) Piece.WHITE_QUEEN else Piece.BLACK_QUEEN
@@ -466,7 +453,6 @@ class FirstFragment : Fragment() {
             dialog.dismiss()
         }
 
-        // Assigning click listeners to image views
         queenView.setOnClickListener(listener)
         rookView.setOnClickListener(listener)
         bishopView.setOnClickListener(listener)
@@ -478,7 +464,7 @@ class FirstFragment : Fragment() {
 
     data class Selection(val p: Piece, val s: Square)
 
-    private var selection: Selection? = null;
+    private var selection: Selection? = null
 
     private fun clearHighlights() {
         for (i in 0 until 8) {
@@ -486,7 +472,7 @@ class FirstFragment : Fragment() {
                 val frameLayout = getViewFromGrid(binding.chessBoard, i, j) as FrameLayout
                 val squareImageView = frameLayout.getChildAt(0) as ImageView
                 squareImageView.setImageResource(if ((i + j) % 2 == 1) R.drawable.light_square else R.drawable.dark_square)
-                squareImageView.setOnClickListener(null)  // Remove old click listeners
+                squareImageView.setOnClickListener(null)
             }
         }
     }
@@ -504,12 +490,12 @@ class FirstFragment : Fragment() {
         Pair(Piece.BLACK_ROOK, R.drawable.black_rook),
         Pair(Piece.BLACK_QUEEN, R.drawable.black_queen),
         Pair(Piece.BLACK_KING, R.drawable.black_king),
-        Pair(Piece.NONE, 0)  // Assuming no drawable for empty squares
+        Pair(Piece.NONE, 0)
     )
 
     private fun updatePieces() {
-        for (rank in Rank.values().reversed().subList(1, 9)) { // Start from rank 8 to rank 1
-            for (file in File.values().toList().subList(0, 8)) { // Start from file A to file H
+        for (rank in Rank.values().reversed().subList(1, 9)) {
+            for (file in File.values().toList().subList(0, 8)) {
                 val square = Square.encode(rank, file)
                 val piece = board.getPiece(square)
                 val (rowIndex, colIndex) = translateSquareToBoardIndex(square)
@@ -517,23 +503,23 @@ class FirstFragment : Fragment() {
                     getViewFromGrid(binding.chessBoard, rowIndex, colIndex) as FrameLayout
 
                 val pieceImageView =
-                    frameLayout.getChildAt(1) as ImageView  // Piece ImageView is assumed to be the second child
+                    frameLayout.getChildAt(1) as ImageView
                 val squareImageView = frameLayout.getChildAt(0) as ImageView
 
                 val drawableId = drawableMap[piece] ?: 0
                 if (drawableId > 0) {
                     if (piece.pieceType == PieceType.KING
-                        &&  board.isKingAttacked
-                        && piece.pieceSide == board.sideToMove) {
+                        && board.isKingAttacked
+                        && piece.pieceSide == board.sideToMove
+                    ) {
                         pieceImageView.setImageResource(R.drawable.red_king)
-                    }
-                    else {
+                    } else {
                         pieceImageView.setImageResource(drawableId)
                     }
                     if (piece.pieceSide == playerSide) {
                         squareImageView.setOnClickListener {
-                            selection = Selection(piece, square);
-                            render();
+                            selection = Selection(piece, square)
+                            render()
                             Log.d(
                                 "asdfasd",
                                 "clicked piece"
@@ -541,7 +527,7 @@ class FirstFragment : Fragment() {
                         }
                     }
                 } else {
-                    pieceImageView.setImageDrawable(null)  // Clear the ImageView if no piece is present
+                    pieceImageView.setImageDrawable(null)
                 }
             }
         }
@@ -549,10 +535,8 @@ class FirstFragment : Fragment() {
 
 
     private fun translateSquareToBoardIndex(square: Square): Pair<Int, Int> {
-        // Implement the translation logic here. This will depend on how you've mapped the squares.
-        // For a standard 8x8 chess board:
-        val rowIndex = square.rank.ordinal// if rank 1 is at the bottom in your app
-        val colIndex = square.file.ordinal // if file A is on the left in your app
+        val rowIndex = square.rank.ordinal
+        val colIndex = square.file.ordinal
         return Pair(rowIndex, colIndex)
     }
 
@@ -585,17 +569,15 @@ class FirstFragment : Fragment() {
         binding.clockTop.text = formatTime(time)
         gameId = arguments?.getString("gameId")
 
-        if(gameId == null) {
+        if (gameId == null) {
             gameId = UUID.randomUUID().toString()
-        }
-        else {
+        } else {
             isVsPlayer = true
         }
 
-        if(arguments?.getString("side") == "black") {
-            playerSide  = Side.BLACK
-        }
-        else if(arguments?.getString("side") == "white") {
+        if (arguments?.getString("side") == "black") {
+            playerSide = Side.BLACK
+        } else if (arguments?.getString("side") == "white") {
             playerSide = Side.WHITE
         }
 
@@ -618,8 +600,7 @@ class FirstFragment : Fragment() {
             if (board.sideToMove == Side.BLACK) {
                 gameOver("White wins by opposing resignation")
                 gameOverUpdate("White wins by opposing resignation")
-            }
-            else {
+            } else {
                 gameOver("Black wins by opposing resignation")
                 gameOverUpdate("Black wins by opposing resignation")
             }
@@ -630,12 +611,12 @@ class FirstFragment : Fragment() {
 
     private fun populateChessBoard() {
         board.loadFromFen(initialFen)
-        val size = 8  // Size of the grid (chessboard is 8x8)
+        val size = 8
         val displayMetrics = resources.displayMetrics
         val screenWidth = displayMetrics.widthPixels
         val screenHeight = displayMetrics.heightPixels
         val boardDimension = minOf(screenWidth, screenHeight) * 0.95
-        squareSize = (boardDimension / size).toInt()  // Cast to int for use in layout params
+        squareSize = (boardDimension / size).toInt()
 
         binding.chessBoard.apply {
             setPadding(0, 0, 0, 0)
@@ -666,11 +647,10 @@ class FirstFragment : Fragment() {
                             FrameLayout.LayoutParams.MATCH_PARENT,
                             FrameLayout.LayoutParams.MATCH_PARENT
                         )
-                        // Initially, no piece image
                     }
 
                     frameLayout.addView(squareImageView)
-                    frameLayout.addView(pieceImageView)  // Piece ImageView is on top
+                    frameLayout.addView(pieceImageView)
                     addView(frameLayout)
                 }
             }
@@ -679,10 +659,8 @@ class FirstFragment : Fragment() {
     }
 
 
-    fun getViewFromGrid(gridLayout: GridLayout, row: Int, col: Int): View? {
-        // Calculate the index based on the row and column
+    private fun getViewFromGrid(gridLayout: GridLayout, row: Int, col: Int): View? {
         val index = 63 - (row * gridLayout.columnCount + (7 - col))
-        // Return the view at the calculated index
         return gridLayout.getChildAt(index)
     }
 

@@ -17,7 +17,6 @@ class MainViewModel : ViewModel() {
 
     private val database = FirebaseDatabase.getInstance()
 
-    // Sets the currently authenticated user from Firebase
     fun setCurrentUser(user: User) {
         _currentUser.postValue(user)
     }
@@ -31,7 +30,6 @@ class MainViewModel : ViewModel() {
     }
 
 
-    // Retrieves the currently authenticated user
     fun getCurrentUser(): LiveData<User> {
         return _currentUser
     }
@@ -46,27 +44,23 @@ class MainViewModel : ViewModel() {
 
 
 
-    // Join lobby with a pending gameId status
     fun joinLobby(uid: String): LiveData<GameInfo> {
         val lobbyRef = database.getReference("/lobby/$uid")
 
         val gameIdLiveData = MutableLiveData<GameInfo>()
 
-        // Set initial lobby data for this user
         lobbyRef.setValue(mapOf("uid" to uid, "gameId" to "pending", "side" to "unknown"))
 
-        // Listen for changes to the gameId field
         lobbyRef.addValueEventListener(object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val gameId = snapshot.child("gameId").getValue(String::class.java)
                 val side = snapshot.child("side").getValue(String::class.java)
                 if (gameId != null && gameId != "pending" && side != null && side != "pending") {
-                    gameIdLiveData.postValue(GameInfo(gameId, side))  // Post the actual gameId once updated
+                    gameIdLiveData.postValue(GameInfo(gameId, side))
                 }
             }
 
             override fun onCancelled(error: DatabaseError) {
-                // Log error or handle it according to your need
             }
         })
         return gameIdLiveData

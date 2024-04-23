@@ -1,5 +1,6 @@
 package com.example.ayushchess
 
+import android.annotation.SuppressLint
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup

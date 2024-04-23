@@ -8,7 +8,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.os.bundleOf
-import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import com.example.ayushchess.databinding.FragmentSecondBinding
@@ -53,7 +52,7 @@ class SecondFragment : Fragment() {
             viewModel.getCurrentUser().observe(viewLifecycleOwner) { user ->
                 viewModel.joinLobby(UUID.randomUUID().toString()).observe(viewLifecycleOwner) { gameInfo ->
                     progressDialog.dismiss()
-                    viewModel.setGameId(gameInfo.id)  // Assuming you have a method to save gameId in ViewModel
+                    viewModel.setGameId(gameInfo.id)
                     viewModel.setCurrentUserSide(gameInfo.side)
                     val bundle = bundleOf("gameId" to gameInfo.id, "side" to gameInfo.side)
                     findNavController().navigate(R.id.action_SecondFragment_to_FirstFragment, bundle)
