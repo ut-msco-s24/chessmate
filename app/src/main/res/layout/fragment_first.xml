@@ -10,7 +10,6 @@
         android:columnCount="8"
         android:padding="16dp"
         android:rowCount="8">
-        <!-- Dynamically add ImageView for each square here -->
     </GridLayout>
 
     <TextView

@@ -34,8 +34,16 @@ class SecondFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         setupButtonPlay()
+
         binding.buttonLogout.setOnClickListener {
             (activity as MainActivity).authUser.logout()
+        }
+
+        binding.playAi.setOnClickListener {
+            findNavController().navigate(R.id.action_SecondFragment_to_FirstFragment,)
+        }
+        binding.buttonTopplayers.setOnClickListener {
+            findNavController().navigate(R.id.action_SecondFragment_to_TopPlayersFragment,)
         }
     }
 

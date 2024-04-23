@@ -10,23 +10,23 @@
         android:id="@+id/queen"
         android:layout_width="48dp"
         android:layout_height="48dp"
-        android:src="@drawable/white_queen" /> <!-- Replace with your drawable -->
+        android:src="@drawable/white_queen" />
 
     <ImageView
         android:id="@+id/rook"
         android:layout_width="48dp"
         android:layout_height="48dp"
-        android:src="@drawable/white_rook" /> <!-- Replace with your drawable -->
+        android:src="@drawable/white_rook" />
 
     <ImageView
         android:id="@+id/bishop"
         android:layout_width="48dp"
         android:layout_height="48dp"
-        android:src="@drawable/white_bishop" /> <!-- Replace with your drawable -->
+        android:src="@drawable/white_bishop" />
 
     <ImageView
         android:id="@+id/knight"
         android:layout_width="48dp"
         android:layout_height="48dp"
-        android:src="@drawable/white_knight" /> <!-- Replace with your drawable -->
+        android:src="@drawable/white_knight" />
 </LinearLayout>

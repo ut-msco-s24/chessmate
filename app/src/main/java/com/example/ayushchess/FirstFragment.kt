@@ -28,6 +28,7 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.DatabaseReference
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
+import com.google.firebase.firestore.FirebaseFirestore
 import java.util.UUID
 import kotlin.properties.Delegates
 
@@ -40,13 +41,11 @@ class FirstFragment : Fragment() {
     private var gameId: String? = null
     private var playerSide: Side? = null
     val minutes: Long = 3
-    val time: Long = 60 * minutes * 100
+    val time: Long = 10 * minutes * 1000
     private var whiteTimeMillis: Long = time
     private var blackTimeMillis: Long = time
 
     private var whiteTimer: CountDownTimer? = null
-
-    private val viewModel: MainViewModel by activityViewModels()
 
     private var blackTimer: CountDownTimer? = null
 
@@ -171,6 +170,9 @@ class FirstFragment : Fragment() {
     }
 
     private fun gameOverUpdate(status: String) {
+        if (!isVsPlayer) {
+            return
+        }
         val updates = hashMapOf<String, Any>(
             "whiteTime" to whiteTimeMillis.toString(),
             "blackTime" to blackTimeMillis.toString(),
@@ -268,32 +270,43 @@ class FirstFragment : Fragment() {
 
                 val fen = snapshot.child("fen").getValue(String::class.java) ?: return
                 val turn = snapshot.child("turn").getValue(String::class.java) ?: return
-                val blackTimeStr = snapshot.child("blackTime").getValue(String::class.java) ?: return
-                val whiteTimeStr = snapshot.child("whiteTime").getValue(String::class.java) ?: return
-                val status = snapshot.child("status").getValue(String::class.java);
-                if (status != null && status != "ongoing" && !gameOverFlag) {
-                    gameOver(status)
-                    return
+
+                if(isVsPlayer) {
+                    val blackTimeStr = snapshot.child("blackTime").getValue(String::class.java) ?: return
+                    val whiteTimeStr = snapshot.child("whiteTime").getValue(String::class.java) ?: return
+                    val status = snapshot.child("status").getValue(String::class.java);
+                    if (status != null && status != "ongoing" && !gameOverFlag) {
+                        gameOver(status)
+                        return
+                    }
+
+
+                    whiteTimeMillis = whiteTimeStr.toLong()
+                    blackTimeMillis = blackTimeStr.toLong()
+
                 }
-                
 
-                whiteTimeMillis = whiteTimeStr.toLong()
-                blackTimeMillis = blackTimeStr.toLong()
-                val board2 = Board()
-                board2.loadFromFen(fen)
-                Log.d("asdfadsf", fen)
-                Log.d("tagsdfasd", playerSide.toString())
+                var board2: Board? = null
+                if (isVsPlayer) {
+                    board2 = Board()
+                    board2.loadFromFen(fen)
+                    Log.d("asdfadsf", fen)
+                    Log.d("tagsdfasd", playerSide.toString())
+                }
 
-                if (board2.sideToMove == playerSide && turn != "init") {
+
+
+
+                if (isVsPlayer &&  board2?.sideToMove == playerSide && turn != "init") {
                     board.loadFromFen(fen)
                     render()
                     onMoveMade()
                 }
-//                if (turn == "player") {
-//                    board.loadFromFen(fen)
-//                    render()
-//                    onMoveMade()
-//                }
+                else if (!isVsPlayer && turn == "player") {
+                    board.loadFromFen(fen)
+                    render()
+                    onMoveMade()
+                }
             }
 
             override fun onCancelled(error: DatabaseError) {
@@ -336,10 +349,39 @@ class FirstFragment : Fragment() {
         return String.format("%02d:%02d", minutes, seconds)
     }
 
+    private fun pushWinner() {
+        val db = FirebaseFirestore.getInstance()
+        val userRef = db.collection("wins").document(uid)
+
+        // Run a transaction to ensure atomic read and increment operations
+        db.runTransaction { transaction ->
+            val snapshot = transaction.get(userRef)
+            if (!snapshot.exists()) {
+                // If the document does not exist, create it with a win count of 1
+                transaction.set(userRef, mapOf(
+                    "uid" to uid,
+                    "username" to username,
+                    "wins" to 1
+                ))
+            } else {
+                // If the document exists, increment the wins count
+                val currentWins = snapshot.getLong("wins") ?: 0
+                transaction.update(userRef, "wins", currentWins + 1)
+            }
+        }.addOnSuccessListener {
+            Log.d("FirebaseFirestore", "User wins updated successfully.")
+        }.addOnFailureListener { e ->
+            Log.w("FirebaseFirestore", "Error updating user wins", e)
+        }
+    }
+
+
     private fun gameOver(message: String = "") {
         if(gameOverFlag) {
             return
         }
+
+
         whiteTimer?.cancel()
         blackTimer?.cancel()
 
@@ -354,6 +396,15 @@ class FirstFragment : Fragment() {
         }
         
         gameOverFlag = true;
+
+        if(message.contains("wins")) {
+            if(message.contains("White") && playerSide == Side.WHITE) {
+                pushWinner()
+            }
+            if(message.contains("Black") && playerSide == Side.BLACK) {
+                pushWinner()
+            }
+        }
 
         AlertDialog.Builder(requireContext())
             .setTitle("Game Over")
@@ -516,11 +567,19 @@ class FirstFragment : Fragment() {
         return binding.root
     }
 
+    private val viewModel: MainViewModel by activityViewModels()
+
+    private var username: String = ""
+    private var uid: String = ""
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
         (activity as MainActivity).supportActionBar?.hide()
 
-
+        viewModel.getCurrentUser().observe(viewLifecycleOwner) {
+            username = it.name
+            uid = it.uid
+        }
 
         binding.clockBottom.text = formatTime(time)
         binding.clockTop.text = formatTime(time)
@@ -545,7 +604,11 @@ class FirstFragment : Fragment() {
 
         populateChessBoard()
         setupFirebaseGameListener()
-        initializeNewGame()
+        if (isVsPlayer) {
+            initializeNewGame()
+        } else {
+            initializeNewGameAi()
+        }
 
 
         binding.buttonResign.setOnClickListener {

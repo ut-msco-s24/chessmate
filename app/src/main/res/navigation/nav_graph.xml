@@ -10,21 +10,34 @@
         android:name="com.example.ayushchess.FirstFragment"
         android:label="@string/first_fragment_label"
         tools:layout="@layout/fragment_first">
-
         <action
             android:id="@+id/action_FirstFragment_to_SecondFragment"
             app:destination="@id/SecondFragment"
             app:popUpTo="@id/SecondFragment"
             app:popUpToInclusive="true"/>
     </fragment>
+
     <fragment
         android:id="@+id/SecondFragment"
         android:name="com.example.ayushchess.SecondFragment"
         android:label="@string/second_fragment_label"
         tools:layout="@layout/fragment_second">
-
         <action
             android:id="@+id/action_SecondFragment_to_FirstFragment"
             app:destination="@id/FirstFragment" />
+        <action
+            android:id="@+id/action_SecondFragment_to_TopPlayersFragment"
+            app:destination="@id/TopPlayersFragment" />
     </fragment>
+
+    <fragment
+        android:id="@+id/TopPlayersFragment"
+        android:name="com.example.ayushchess.TopPlayersFragment"
+        android:label="@string/top_players_fragment_label"
+        tools:layout="@layout/fragment_top_players">
+        <action
+            android:id="@+id/action_TopPlayersFragment_to_SecondFragment"
+            app:destination="@id/SecondFragment" />
+    </fragment>
+
 </navigation>

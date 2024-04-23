@@ -9,7 +9,6 @@
         android:layout_height="match_parent"
         android:padding="16dp">
 
-        <!-- A vertical LinearLayout to hold the buttons -->
         <LinearLayout
             android:id="@+id/button_container"
             android:layout_width="wrap_content"
@@ -18,19 +17,16 @@
             android:layout_centerInParent="true"
             android:gravity="center">
 
-            <!-- The Play button -->
             <Button
                 android:id="@+id/button_play"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="Play (Multiplayer)"/>
 
-            <!-- Add some vertical space between the buttons -->
             <Space
                 android:layout_width="match_parent"
                 android:layout_height="16dp"/>
 
-            <!-- The Logout button -->
             <Button
                 android:id="@+id/playAi"
                 android:layout_width="wrap_content"
@@ -41,7 +37,16 @@
                 android:layout_width="match_parent"
                 android:layout_height="16dp"/>
 
-            <!-- The Logout button -->
+            <Button
+                android:id="@+id/button_topplayers"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Top Players"/>
+
+            <Space
+                android:layout_width="match_parent"
+                android:layout_height="16dp"/>
+
             <Button
                 android:id="@+id/button_logout"
                 android:layout_width="wrap_content"
